@@ -5,7 +5,7 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "${HOME}/.arduino15/packages/arduino/**",
-                "${HOME}/Arduino/libraries/*"
+                "${HOME}/Arduino/libraries/**"
 
             ],
             "forcedInclude": [

@@ -2,6 +2,17 @@
 
 void setup(){
     Serial.begin( 9600 );
+    while( !rtc.begin() );
+    if( rtc.lostPower() ){
+        #ifdef TEST
+        rtc.adjust( DateTime(2022, 2, 8, 0, 0, 0 ) );
+        #else
+        rtc.adjust( DateTime( F( __DATE__ ), F( __TIME__ ) ) );
+        #endif
+    }
+    Serial.print( "RTC Begin at: " );
+    Serial.println( rtc.now().timestamp( DateTime::TIMESTAMP_FULL ) );
+
     rawConfigData value = toRaw( config{ 
             .sec=5, 
             .min=6, 
