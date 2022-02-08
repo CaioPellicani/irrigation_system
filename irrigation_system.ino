@@ -2,7 +2,9 @@
 
 void setup(){
     Serial.begin( 9600 );
-    rawConfigData value = toRaw( config{ .sec=63, .min=0, .hour=0 } );
+
+    rawConfigData value = toRaw( config{ .sec=40, .min=30, .hour=9 } );
+
     Serial.println( value, BIN );
     Serial.println( toConfig( value ).sec );
     Serial.println( toConfig( value ).min );
