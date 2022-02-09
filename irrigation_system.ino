@@ -1,5 +1,8 @@
 #include "irrigation_system.h"
 
+#define NUM_VALV 2
+Valv arrValv[NUM_VALV];
+
 void setup(){
     Serial.begin( 9600 );
     while( !rtc.begin() );
@@ -13,35 +16,62 @@ void setup(){
     Serial.print( "RTC Begin at: " );
     Serial.println( rtc.now().timestamp( DateTime::TIMESTAMP_FULL ) );
 
-    rawConfigData value = toRaw( config{ 
-            .sec=5, 
-            .min=6, 
-            .hour=7, 
-            .minEvent=5*60, 
-            .maxEvent=20*60
-        } 
-    );
+    arrValv[0].begin( 7 );
+    arrValv[1].begin( 8 );
 
-    Serial.println( value, BIN );
-    Serial.println( toConfig( value ).sec );
-    Serial.println( toConfig( value ).min );
-    Serial.println( toConfig( value ).hour );
-    Serial.println( toConfig( value ).minEvent );
-    Serial.println( toConfig( value ).maxEvent );
+    arrValv[0].addConfig( 9, 0, 0, 1, 5 );  
+    arrValv[1].addConfig( 9, 0, 1, 1, 5 );  
 }
 
-void loop(){}   
+void loop(){
+    for( int i = 0; i < NUM_VALV; i++ ){
+        Serial.print( "Valv " + String( i ) + " ");
+        arrValv[i].checkConfigs();
+    }
+}   
 
-rawConfigData toRaw( config data ){
-    /*  
-    PROTOCOL:
-     6 bits -  0 to  5 = SEC
-     6 bits -  6 to 11 = MIN
-     5 bits - 12 to 16 = HOUR 
-    12 bits - 17 to 28 = MIN TIME EVENT (up to 2 Hours)
-    12 bits - 29 to 40 = MAX TIME EVENT(up to 2 Hours)
-    */
+void Valv::begin( uint8_t pin ){
+    this->configsCount = 0;
+    this->pin = pin;
+    pinMode( this->pin, OUTPUT );
+    digitalWrite( this->pin, LOW );
+}
 
+void Valv::checkConfigs(){
+    for( int i = 0; i < this->configsCount; i++ ){
+        Serial.println( this->config[i] );
+    }
+}
+
+bool Valv::addConfig( uint8_t hour, uint8_t min, uint8_t sec, uint16_t minEvent, uint16_t maxEvent ){
+    if( this->configsCount < MAX_CONFIG_NUM ){
+        this->config[ this->configsCount++ ] = this->toRaw( Valv::Config{
+            .sec = sec,
+            .min = min,
+            .hour = hour,
+            .minEvent = minEvent,
+            .maxEvent = maxEvent
+        });
+        return true;
+    }
+    return false;
+}
+
+rawConfigData Valv::getConfig( uint8_t index ){
+    return this->config[ index ];
+}
+uint8_t Valv::getCountConfig(){
+    return this->configsCount;
+}
+
+/*! @protocol
+*    6 bits -  0 to  5 = SEC 
+*    6 bits -  6 to 11 = MIN
+*    5 bits - 12 to 16 = HOUR 
+*   12 bits - 17 to 28 = MIN TIME EVENT (up to 2 Hours)
+*   12 bits - 29 to 40 = MAX TIME EVENT(up to 2 Hours)
+*/
+rawConfigData Valv::toRaw( Valv::Config data ){
     while( data.sec >= 60 ){
         data.sec -= 60;
         data.min++;
@@ -64,8 +94,8 @@ rawConfigData toRaw( config data ){
         ( ( uint64_t ) data.maxEvent << 29 ) );
 }
 
-config toConfig( rawConfigData rawData ){
-    return {
+Valv::Config Valv::read( rawConfigData rawData ){
+    return Valv::Config{
         .sec =      ( uint8_t ) (    rawData & ( uint64_t ) 0x3F ),
         .min =      ( uint8_t ) ( (  rawData & ( uint64_t ) 0x3F  <<  6 ) >>  6 ),
         .hour =     ( uint8_t ) ( (  rawData & ( uint64_t ) 0x1F  << 12 ) >> 12 ),
