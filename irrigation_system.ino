@@ -28,6 +28,10 @@ void loop(){
         Serial.print( "Valv " + String( i ) + " ");
         arrValv[i].checkConfigs();
     }
+#ifdef TEST
+    static int i = 0;
+    if( ++i >= 3 ){ exit(0); }
+#endif
 }   
 
 void Valv::begin( uint8_t pin ){
