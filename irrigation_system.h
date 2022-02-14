@@ -10,35 +10,58 @@
 #endif
 
 #define MAX_CONFIG_NUM 2
-RTC_DS3231 rtc;
 
+/*! @protocol
+*    6 bits -  0 to  5 = SEC 
+*    6 bits -  6 to 11 = MIN
+*    5 bits - 12 to 16 = HOUR 
+*   12 bits - 17 to 28 = MIN TIME EVENT (up to 2 Hours)
+*   12 bits - 29 to 40 = MAX TIME EVENT(up to 2 Hours)
+*    1 bit  - 41 = type ( 0 == enqueued, 1 == simultaneous )
+*/
 typedef uint64_t rawConfigData;
+enum { ENQUEUED, SIMULTANEOUS };
+
+class Config{
+public:
+    uint8_t sec;
+    uint8_t min;
+    uint8_t hour;
+    uint16_t minEvent;
+    uint16_t maxEvent;
+    uint8_t type;
+    Config( uint8_t sec = 0, uint8_t min = 0, uint8_t hour = 0, uint16_t minEvent = 0, 
+            uint16_t maxEvent = 0, uint8_t type = SIMULTANEOUS );
+    Config( rawConfigData rawData );
+    rawConfigData toRaw();
+}; 
 
 class Valv{
 private:
     uint8_t pin;
     uint8_t configsCount;
     rawConfigData config[MAX_CONFIG_NUM];
-
-    struct Config{
-        uint8_t sec;
-        uint8_t min;
-        uint8_t hour;
-        uint16_t minEvent;
-        uint16_t maxEvent;
-    };
-    rawConfigData toRaw( Config data );
-    Config read( rawConfigData rawData ); 
-public:
+public:    
     void begin( uint8_t pin );
-    bool addConfig( uint8_t sec = 0, 
-                    uint8_t min = 0, 
-                    uint8_t hour = 0, 
-                    uint16_t minEvent = 0, 
-                    uint16_t maxEvent = 0 );
+    bool addConfig( Config newConfig );
+    uint8_t getPin();
     rawConfigData getConfig( uint8_t index );
+    rawConfigData* getConfigs();
     uint8_t getCountConfig();
-    void checkConfigs();
+};
+
+class IrSystem{
+private:
+    struct node{
+        node* nextNode;
+        uint8_t pin;
+        uint16_t time;
+    }; 
+public:
+    node* simultaneous;
+    node* enqueued;
+    void add( uint8_t pin, uint16_t time, uint8_t type = SIMULTANEOUS );
+    void checkConfigs( Valv* valv );
 };
 
 
