@@ -1,0 +1,21 @@
+{
+    "version": "2.0.0",
+    "command": "bash",
+//    "isShellCommand": true,
+//    "showOutput": "always",
+    "options": {
+        "cwd": "${workspaceRoot}"
+    },
+	"args": [
+        "-c"
+    ],
+    "tasks": [
+        {
+            "label": "build",
+            "type":"shell",
+ //           "suppressTaskName": true,
+ //           "isBuildCommand": true,
+            "args": ["make epoxy"]
+        }
+    ]
+}
