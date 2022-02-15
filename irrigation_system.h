@@ -43,7 +43,6 @@ private:
     rawConfigData config[MAX_CONFIG_NUM];
 public:  
     Valv();
-    Valv( uint8_t pin );
     void begin( uint8_t pin );
     bool addConfig( Config newConfig );
     uint8_t getPin();
@@ -63,16 +62,18 @@ private:
         uint8_t pin;
         uint16_t time;
     }; 
-    
+    vNode* valvs;
+
+    bool isExecuting( uint8_t pin );
 public:
     node* simultaneous;
     node* enqueued;
-    vNode* valvs;
+
     void addValv( uint8_t pin );
-    Valv* getValv( uint8_t i );
+    Valv* getValv( uint8_t i ); 
     void add( uint8_t pin, uint16_t time, uint8_t type = SIMULTANEOUS );
     void checkConfigs();
-    bool executing( uint8_t pin );
+    void execute();
 };
 
 

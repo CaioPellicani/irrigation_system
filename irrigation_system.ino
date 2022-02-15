@@ -20,24 +20,14 @@ void setup(){
     irSys.addValv( 8 );
     irSys.addValv( 9 );
 
-    irSys.getValv( 7 )->addConfig( Config( 9, 0, 0, 1, 5, 1 ) );
-    irSys.getValv( 8 )->addConfig( Config( 9, 0, 2, 1, 5, 1 ) ); 
-    irSys.getValv( 9 )->addConfig( Config( 9, 0, 1, 1, 5, 1 ) ); 
+    irSys.getValv( 7 )->addConfig( Config( 9, 0, 0, 1, 5, SIMULTANEOUS ) );
+    irSys.getValv( 8 )->addConfig( Config( 9, 0, 2, 1, 5, SIMULTANEOUS ) ); 
+    irSys.getValv( 9 )->addConfig( Config( 9, 0, 1, 1, 5, SIMULTANEOUS ) ); 
 }
 
 void loop(){
-    irSys.checkConfigs();
-
     Serial.println( rtc.now().timestamp( DateTime::TIMESTAMP_FULL ) );
-
-    Serial.println( irSys.simultaneous->pin );
-    if( irSys.simultaneous->nextNode != NULL ){
-        Serial.println( irSys.simultaneous->nextNode->pin );
-        if( irSys.simultaneous->nextNode->nextNode != NULL ){
-           Serial.println( irSys.simultaneous->nextNode->nextNode->pin );
-    }
-    }
-
+    irSys.execute();
     delay( 500 );
 #ifdef TEST
     static int i = 5; if( --i <= 0 ) exit(0); 
@@ -90,9 +80,6 @@ rawConfigData Config::toRaw(){
 
 /** Valv METHODS */
 Valv::Valv(){}
-Valv::Valv( uint8_t pin ){
-    this->begin( pin );
-}
 void Valv::begin( uint8_t pin ){
     this->configsCount = 0;
     this->pin = pin;
@@ -138,7 +125,20 @@ void IrSystem::add( uint8_t pin, uint16_t time, uint8_t type ){
     ( *handler )->time = time;
 }
 
-bool IrSystem::executing( uint8_t pin ){
+void IrSystem::execute(){
+    this->checkConfigs();
+
+    if( this->enqueued != NULL ){
+        Serial.println( irSys.enqueued->pin );
+    }
+    node** handler = &this->simultaneous;
+    while ( *handler != NULL ){
+        Serial.println( (* handler )->pin );
+        handler = &( *handler )->nextNode;
+    }
+}
+
+bool IrSystem::isExecuting( uint8_t pin ){
     node** headList[2] = { &this->simultaneous, &this->enqueued };
     node** handler;
     for( int i = 0; i < 2; i++ ){
@@ -160,7 +160,7 @@ void IrSystem::addValv( uint8_t pin ){
     }
     ( *handler ) = new vNode;
     ( *handler )->nextNode = NULL;
-    ( *handler )->valv = Valv( pin ); 
+    ( *handler )->valv.begin( pin ); 
 }
 
 Valv* IrSystem::getValv( uint8_t pin ){
@@ -179,10 +179,11 @@ void IrSystem::checkConfigs(){
         Valv* valv = &( *handler )->valv;
         for( int i = 0; i < valv->getCountConfig(); i++ ){
             readingConfig = Config( valv->getConfig( i ) );
-            if( ( !this->executing( valv->getPin() ) ) &&
-                ( readingConfig.hour == now.hour() ) &&
+            if( ( readingConfig.hour == now.hour() ) &&
                 ( readingConfig.min == now.minute() ) &&
-                ( readingConfig.sec == now.second() ) ){
+                ( readingConfig.sec == now.second() ) && 
+                ( !this->isExecuting( valv->getPin() ) )
+            ){
                 this->add( valv->getPin(), readingConfig.maxEvent, readingConfig.type );    
             }
         }
