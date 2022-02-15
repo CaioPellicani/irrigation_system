@@ -1,7 +1,5 @@
 #include "irrigation_system.h"
 
-#define NUM_VALV 2
-Valv arrValv[NUM_VALV];
 RTC_DS3231 rtc;
 IrSystem irSys;
 
@@ -18,22 +16,31 @@ void setup(){
     Serial.print( "RTC Begin at: " );
     Serial.println( rtc.now().timestamp( DateTime::TIMESTAMP_FULL ) );
 
-    arrValv[0].begin( 7 );
-    arrValv[1].begin( 8 );
+    irSys.addValv( 7 );
+    irSys.addValv( 8 );
+    irSys.addValv( 9 );
 
-    arrValv[0].addConfig( Config( 9, 0, 0, 1, 5, 1 ) );  
-    arrValv[1].addConfig( Config( 9, 0, 1, 1, 5, 1 ) );  
+    irSys.getValv( 7 )->addConfig( Config( 9, 0, 0, 1, 5, 1 ) );
+    irSys.getValv( 8 )->addConfig( Config( 9, 0, 2, 1, 5, 1 ) ); 
+    irSys.getValv( 9 )->addConfig( Config( 9, 0, 1, 1, 5, 1 ) ); 
 }
 
 void loop(){
-    irSys.checkConfigs( &arrValv[0] );
-    irSys.checkConfigs( &arrValv[1] );
+    irSys.checkConfigs();
+
+    Serial.println( rtc.now().timestamp( DateTime::TIMESTAMP_FULL ) );
 
     Serial.println( irSys.simultaneous->pin );
-    //Serial.println( irSys.simultaneous->nextNode->pin );
+    if( irSys.simultaneous->nextNode != NULL ){
+        Serial.println( irSys.simultaneous->nextNode->pin );
+        if( irSys.simultaneous->nextNode->nextNode != NULL ){
+           Serial.println( irSys.simultaneous->nextNode->nextNode->pin );
+    }
+    }
 
+    delay( 500 );
 #ifdef TEST
-    exit(0); 
+    static int i = 5; if( --i <= 0 ) exit(0); 
 #endif
 }   
 
@@ -82,7 +89,10 @@ rawConfigData Config::toRaw(){
 }
 
 /** Valv METHODS */
-
+Valv::Valv(){}
+Valv::Valv( uint8_t pin ){
+    this->begin( pin );
+}
 void Valv::begin( uint8_t pin ){
     this->configsCount = 0;
     this->pin = pin;
@@ -104,9 +114,6 @@ uint8_t Valv::getPin(){
 rawConfigData Valv::getConfig( uint8_t index ){
     return this->config[ index ];
 }
-rawConfigData* Valv::getConfigs(){
-    return this->config;
-}
 uint8_t Valv::getCountConfig(){
     return this->configsCount;
 }
@@ -121,30 +128,64 @@ void IrSystem::add( uint8_t pin, uint16_t time, uint8_t type ){
     }else{
         handler = &this->enqueued;
     }
-    
-    node* newNode = new node;
-    newNode->nextNode = NULL;
-    newNode->pin = pin;
-    newNode->time = time;
 
     while ( *handler != NULL ){
         handler = &( *handler )->nextNode;
     }
-    ( *handler ) = newNode; 
+    ( *handler ) = new node;
+    ( *handler )->nextNode = NULL;
+    ( *handler )->pin = pin;
+    ( *handler )->time = time;
 }
 
-void IrSystem::checkConfigs( Valv* valv ){
-    static Config readingConfig;
-    static DateTime now = rtc.now();
-
-    for( int i = 0; i < valv->getCountConfig(); i++ ){
-        readingConfig = Config( valv->getConfig( i ) );
-        if( ( readingConfig.hour == now.hour() ) &&
-            ( readingConfig.min == now.minute() ) &&
-            ( readingConfig.sec == now.second() ) ){
-            Serial.println( readingConfig.sec );
-            this->add( valv->getPin(), readingConfig.maxEvent, readingConfig.type );    
+bool IrSystem::executing( uint8_t pin ){
+    node** headList[2] = { &this->simultaneous, &this->enqueued };
+    node** handler;
+    for( int i = 0; i < 2; i++ ){
+        handler = headList[i];
+        while( ( *handler ) != NULL ){
+            if( ( *handler )->pin == pin ){
+                return true;
+            }
+            handler = &( *handler )->nextNode;
         }
+    }
+    return false;
+}
 
+void IrSystem::addValv( uint8_t pin ){
+    vNode** handler = &valvs;    
+    while ( *handler != NULL ){
+        handler = &( *handler )->nextNode;
+    }
+    ( *handler ) = new vNode;
+    ( *handler )->nextNode = NULL;
+    ( *handler )->valv = Valv( pin ); 
+}
+
+Valv* IrSystem::getValv( uint8_t pin ){
+    vNode** handler = &valvs; 
+    while( ( ( *handler ) != NULL ) && ( ( *handler )->valv.getPin() != pin ) ){
+        handler = &( *handler )->nextNode;
+    }
+    return &( *handler )->valv;
+}
+
+void IrSystem::checkConfigs(){
+    Config readingConfig;
+    DateTime now = rtc.now();
+    vNode** handler = &valvs;
+    while( ( *handler ) != NULL ){
+        Valv* valv = &( *handler )->valv;
+        for( int i = 0; i < valv->getCountConfig(); i++ ){
+            readingConfig = Config( valv->getConfig( i ) );
+            if( ( !this->executing( valv->getPin() ) ) &&
+                ( readingConfig.hour == now.hour() ) &&
+                ( readingConfig.min == now.minute() ) &&
+                ( readingConfig.sec == now.second() ) ){
+                this->add( valv->getPin(), readingConfig.maxEvent, readingConfig.type );    
+            }
+        }
+        handler = &( *handler )->nextNode;
     }
 }

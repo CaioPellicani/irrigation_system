@@ -41,27 +41,38 @@ private:
     uint8_t pin;
     uint8_t configsCount;
     rawConfigData config[MAX_CONFIG_NUM];
-public:    
+public:  
+    Valv();
+    Valv( uint8_t pin );
     void begin( uint8_t pin );
     bool addConfig( Config newConfig );
     uint8_t getPin();
     rawConfigData getConfig( uint8_t index );
-    rawConfigData* getConfigs();
     uint8_t getCountConfig();
 };
 
 class IrSystem{
 private:
+    struct vNode{
+        vNode* nextNode;
+        Valv valv;
+    };
+
     struct node{
         node* nextNode;
         uint8_t pin;
         uint16_t time;
     }; 
+    
 public:
     node* simultaneous;
     node* enqueued;
+    vNode* valvs;
+    void addValv( uint8_t pin );
+    Valv* getValv( uint8_t i );
     void add( uint8_t pin, uint16_t time, uint8_t type = SIMULTANEOUS );
-    void checkConfigs( Valv* valv );
+    void checkConfigs();
+    bool executing( uint8_t pin );
 };
 
 
