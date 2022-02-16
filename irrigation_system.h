@@ -61,19 +61,23 @@ private:
         node* nextNode;
         uint8_t pin;
         uint16_t time;
+        uint32_t lastMillis;
     }; 
-    vNode* valvs;
 
-    bool isExecuting( uint8_t pin );
-public:
+    vNode* valvs;
     node* simultaneous;
     node* enqueued;
+    bool isExecuting( uint8_t pin );
+    void add( uint8_t pin, uint16_t time, uint8_t type = SIMULTANEOUS );
 
+public:
+    void remove( node** dNode );
     void addValv( uint8_t pin );
     Valv* getValv( uint8_t i ); 
-    void add( uint8_t pin, uint16_t time, uint8_t type = SIMULTANEOUS );
-    void checkConfigs();
-    void execute();
+
+    void checkConfigs( DateTime now );
+    bool execute( node** eNode );
+    void run( DateTime now );
 };
 
 

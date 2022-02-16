@@ -1,4 +1,4 @@
-#include "irrigation_system.h"
+#include "IrSystem.h"
 
 RTC_DS3231 rtc;
 IrSystem irSys;
@@ -20,18 +20,30 @@ void setup(){
     irSys.addValv( 8 );
     irSys.addValv( 9 );
 
-    irSys.getValv( 7 )->addConfig( Config( 9, 0, 0, 1, 5, SIMULTANEOUS ) );
-    irSys.getValv( 8 )->addConfig( Config( 9, 0, 2, 1, 5, SIMULTANEOUS ) ); 
-    irSys.getValv( 9 )->addConfig( Config( 9, 0, 1, 1, 5, SIMULTANEOUS ) ); 
+    irSys.getValv( 7 )->addConfig( Config( 9, 0, 0, 1, 2, SIMULTANEOUS ) );
+    irSys.getValv( 7 )->addConfig( Config( 9, 0, 7, 1, 2, SIMULTANEOUS ) );
+    irSys.getValv( 8 )->addConfig( Config( 9, 0, 2, 1, 2, SIMULTANEOUS ) ); 
+    irSys.getValv( 9 )->addConfig( Config( 9, 0, 1, 1, 2, SIMULTANEOUS ) ); 
 }
+
 
 void loop(){
     Serial.println( rtc.now().timestamp( DateTime::TIMESTAMP_FULL ) );
-    irSys.execute();
-    delay( 500 );
-#ifdef TEST
-    static int i = 5; if( --i <= 0 ) exit(0); 
-#endif
+    Serial.print( "pin 7 -> ");
+    Serial.println( digitalRead( 7 ) );
+    Serial.print( "pin 8 -> ");
+    Serial.println( digitalRead( 8 ) );
+    Serial.print( "pin 9 -> ");
+    Serial.println( digitalRead( 9 ) );
+
+    irSys.run( rtc.now() );
+    delay( 1000 );
+//#ifdef TEST
+    static int i = 10; if( --i <= 0 ) exit(0); 
+    Serial.print( "i = " );
+    Serial.println( 10-i );
+//#endif
+
 }   
 
 /** Config METHODS */
@@ -123,19 +135,42 @@ void IrSystem::add( uint8_t pin, uint16_t time, uint8_t type ){
     ( *handler )->nextNode = NULL;
     ( *handler )->pin = pin;
     ( *handler )->time = time;
+    ( *handler )->lastMillis = millis();
 }
 
-void IrSystem::execute(){
-    this->checkConfigs();
+void IrSystem::remove( node** dNode ){
+    node* deadNode = *dNode;
+    *dNode = deadNode->nextNode;
+    delete deadNode;
+}
+
+void IrSystem::run( DateTime now ){
+    this->checkConfigs( now );
 
     if( this->enqueued != NULL ){
-        Serial.println( irSys.enqueued->pin );
+        this->execute( &this->enqueued );
     }
+
     node** handler = &this->simultaneous;
-    while ( *handler != NULL ){
-        Serial.println( (* handler )->pin );
+    while ( ( handler != NULL ) && ( *handler != NULL ) ){
+        this->execute( handler );
         handler = &( *handler )->nextNode;
     }
+}
+
+bool IrSystem::execute( node** eNode ){
+    bool result = true;
+    if( millis() - ( *eNode )->lastMillis >= 1000 ){
+        ( *eNode )->time--;
+    }
+    if( ( *eNode )->time > 0 ){
+        digitalWrite( ( *eNode )->pin, HIGH );
+    }else{
+        digitalWrite( ( *eNode )->pin, LOW );
+        this->remove( eNode );
+        result = false;
+    }
+    return result;
 }
 
 bool IrSystem::isExecuting( uint8_t pin ){
@@ -171,9 +206,8 @@ Valv* IrSystem::getValv( uint8_t pin ){
     return &( *handler )->valv;
 }
 
-void IrSystem::checkConfigs(){
+void IrSystem::checkConfigs( DateTime now ){
     Config readingConfig;
-    DateTime now = rtc.now();
     vNode** handler = &valvs;
     while( ( *handler ) != NULL ){
         Valv* valv = &( *handler )->valv;
