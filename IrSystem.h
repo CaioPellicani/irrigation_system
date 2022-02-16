@@ -1,5 +1,5 @@
-#ifndef _IRRIGATION_STSTEM_H_
-#define _IRRIGATION_STSTEM_H_
+#ifndef __IR_SYSTEM_H__
+#define __IR_SYSTEM_H__
 
 #include <Arduino.h>
 
@@ -79,6 +79,5 @@ public:
     bool execute( node** eNode );
     void run( DateTime now );
 };
-
 
 #endif
