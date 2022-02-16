@@ -1,24 +1,25 @@
 #include "IrSystem.h"
 /** Config METHODS */
 
-Config::Config( uint8_t hour, uint8_t min, uint8_t sec, uint16_t minEvent, uint16_t maxEvent, uint8_t pause, uint8_t type ){
+Config::Config( uint8_t hour, uint8_t min, uint8_t sec, uint16_t secHIGH, bool useMonthlyPercent, uint8_t pause, uint8_t type ){
     this->sec = sec;
     this->min = min;
     this->hour = hour;
     this->pause = pause;
-    this->minEvent = minEvent;
-    this->maxEvent = maxEvent;
+    this->secHIGH = secHIGH;
+    this->useMonthlyPercent = useMonthlyPercent;
     this->type = type;
 }
 
+#define BIT_OP( type, mask, shift ) ( type )( ( rawData & ( uint64_t ) mask << shift ) >> shift )
 Config::Config( rawConfigData rawData ){
-    this->sec =      ( uint8_t )  (   rawData & ( uint64_t )  0x3F );
-    this->min =      ( uint8_t )  ( ( rawData & ( uint64_t )  0x3F <<  6 ) >>  6 );
-    this->hour =     ( uint8_t )  ( ( rawData & ( uint64_t )  0x1F << 12 ) >> 12 );
-    this->pause =    ( uint8_t )  ( ( rawData & ( uint64_t )  0x3F << 17 ) >> 17  );
-    this->minEvent = ( uint16_t ) ( ( rawData & ( uint64_t ) 0xFFF << 23 ) >> 23 );
-    this->maxEvent = ( uint16_t ) ( ( rawData & ( uint64_t ) 0xFFF << 35 ) >> 35 );
-    this->type     = ( uint8_t )  ( ( rawData & ( uint64_t )   0x1 << 47 ) >> 47 );
+    this->sec =               BIT_OP(  uint8_t,  0x3F,  0 );
+    this->min =               BIT_OP(  uint8_t,  0x3F,  6 );
+    this->hour =              BIT_OP(  uint8_t,  0x1F, 12 );
+    this->pause =             BIT_OP(  uint8_t,  0x3F, 17 );
+    this->secHIGH =           BIT_OP( uint16_t, 0xFFF, 23 );
+    this->useMonthlyPercent = BIT_OP(  uint8_t,   0x1, 35 );
+    this->type =              BIT_OP(  uint8_t,   0x1, 36 );
 }
 
 rawConfigData Config::toRaw(){
@@ -33,17 +34,16 @@ rawConfigData Config::toRaw(){
     while( this->hour >= 24 ){ 
        this->hour -= 24; }
 
-    if( this->minEvent > 0xFFF ) this->minEvent = 0xFFF;
-    if( this->maxEvent > 0xFFF ) this->maxEvent = 0xFFF;
+    if( this->secHIGH > 0xFFF ) this->secHIGH = 0xFFF;
 
     return ( 
-        ( ( uint64_t ) this->sec ) | 
-        ( ( uint64_t ) this->min      <<  6 ) |
-        ( ( uint64_t ) this->hour     << 12 ) | 
-        ( ( uint64_t ) this->pause    << 17 ) | 
-        ( ( uint64_t ) this->minEvent << 23 ) | 
-        ( ( uint64_t ) this->maxEvent << 35 ) |
-        ( ( uint64_t ) this->type     << 47 ) );
+        ( ( uint64_t ) this->sec               <<  0 ) | 
+        ( ( uint64_t ) this->min               <<  6 ) |
+        ( ( uint64_t ) this->hour              << 12 ) | 
+        ( ( uint64_t ) this->pause             << 17 ) | 
+        ( ( uint64_t ) this->secHIGH           << 23 ) |
+        ( ( uint64_t ) this->useMonthlyPercent << 35 ) |
+        ( ( uint64_t ) this->type              << 36 ) );
 }
 
 /** Valv METHODS */
@@ -75,6 +75,27 @@ uint8_t Valv::getCountConfig(){
 
 
 /** IrSystem METHODS */
+
+IrSystem::IrSystem(){
+    this->monthlyPercent( 100, 100, 100, 100, 100, 100,
+                          100, 100, 100, 100, 100, 100 );
+}
+void IrSystem::monthlyPercent( uint8_t jan, uint8_t feb, uint8_t mar, uint8_t apr, 
+                                  uint8_t may, uint8_t jun, uint8_t jul, uint8_t ago, 
+                                  uint8_t sep, uint8_t out, uint8_t nov, uint8_t dez ){
+    this->arrMonthlyPercent[ 0] = jan; 
+    this->arrMonthlyPercent[ 1] = feb; 
+    this->arrMonthlyPercent[ 2] = mar; 
+    this->arrMonthlyPercent[ 3] = apr; 
+    this->arrMonthlyPercent[ 4] = may; 
+    this->arrMonthlyPercent[ 5] = jun; 
+    this->arrMonthlyPercent[ 6] = jul; 
+    this->arrMonthlyPercent[ 7] = ago; 
+    this->arrMonthlyPercent[ 8] = sep; 
+    this->arrMonthlyPercent[ 9] = out; 
+    this->arrMonthlyPercent[10] = nov; 
+    this->arrMonthlyPercent[11] = dez; 
+}
 
 void IrSystem::add( uint8_t pin, uint16_t time, uint8_t pause, uint8_t type ){
     node** handler;
@@ -184,7 +205,7 @@ void IrSystem::checkConfigs( DateTime now ){
                 ( !this->isExecuting( valv->getPin() ) )
             ){
                 this->add(  valv->getPin(), 
-                            readingConfig.maxEvent, 
+                            readingConfig.secHIGH, 
                             readingConfig.pause, 
                             readingConfig.type );    
             }
