@@ -88,7 +88,7 @@ void IrSystem::add( uint8_t pin, uint16_t time, uint8_t type ){
     ( *handler )->nextNode = NULL;
     ( *handler )->pin = pin;
     ( *handler )->time = time;
-    ( *handler )->lastMillis = millis();
+    ( *handler )->lastMillis = 0;
 }
 
 void IrSystem::remove( node** dNode ){
@@ -113,6 +113,9 @@ void IrSystem::run( DateTime now ){
 
 bool IrSystem::execute( node** eNode ){
     bool result = true;
+    if( ( *eNode )->lastMillis == 0 ){
+        ( *eNode )->lastMillis = millis();
+    }
     if( millis() - ( *eNode )->lastMillis >= 1000 ){
         ( *eNode )->time--;
     }
