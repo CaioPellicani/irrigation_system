@@ -1,10 +1,11 @@
 #include "IrSystem.h"
 /** Config METHODS */
 
-Config::Config( uint8_t hour, uint8_t min, uint8_t sec, uint16_t minEvent, uint16_t maxEvent, uint8_t type ){
+Config::Config( uint8_t hour, uint8_t min, uint8_t sec, uint16_t minEvent, uint16_t maxEvent, uint8_t pause, uint8_t type ){
     this->sec = sec;
     this->min = min;
     this->hour = hour;
+    this->pause = pause;
     this->minEvent = minEvent;
     this->maxEvent = maxEvent;
     this->type = type;
@@ -14,9 +15,10 @@ Config::Config( rawConfigData rawData ){
     this->sec =      ( uint8_t )  (   rawData & ( uint64_t )  0x3F );
     this->min =      ( uint8_t )  ( ( rawData & ( uint64_t )  0x3F <<  6 ) >>  6 );
     this->hour =     ( uint8_t )  ( ( rawData & ( uint64_t )  0x1F << 12 ) >> 12 );
-    this->minEvent = ( uint16_t ) ( ( rawData & ( uint64_t ) 0xFFF << 17 ) >> 17 );
-    this->maxEvent = ( uint16_t ) ( ( rawData & ( uint64_t ) 0xFFF << 29 ) >> 29 );
-    this->type     = ( uint8_t )  ( ( rawData & ( uint64_t )   0x1 << 41 ) >> 41 );
+    this->pause =    ( uint8_t )  ( ( rawData & ( uint64_t )  0x3F << 17 ) >> 17  );
+    this->minEvent = ( uint16_t ) ( ( rawData & ( uint64_t ) 0xFFF << 23 ) >> 23 );
+    this->maxEvent = ( uint16_t ) ( ( rawData & ( uint64_t ) 0xFFF << 35 ) >> 35 );
+    this->type     = ( uint8_t )  ( ( rawData & ( uint64_t )   0x1 << 47 ) >> 47 );
 }
 
 rawConfigData Config::toRaw(){
@@ -37,10 +39,11 @@ rawConfigData Config::toRaw(){
     return ( 
         ( ( uint64_t ) this->sec ) | 
         ( ( uint64_t ) this->min      <<  6 ) |
-        ( ( uint64_t ) this->hour     << 12 ) |  
-        ( ( uint64_t ) this->minEvent << 17 ) | 
-        ( ( uint64_t ) this->maxEvent << 29 ) |
-        ( ( uint64_t ) this->type     << 41 ) );
+        ( ( uint64_t ) this->hour     << 12 ) | 
+        ( ( uint64_t ) this->pause    << 17 ) | 
+        ( ( uint64_t ) this->minEvent << 23 ) | 
+        ( ( uint64_t ) this->maxEvent << 35 ) |
+        ( ( uint64_t ) this->type     << 47 ) );
 }
 
 /** Valv METHODS */
@@ -73,7 +76,7 @@ uint8_t Valv::getCountConfig(){
 
 /** IrSystem METHODS */
 
-void IrSystem::add( uint8_t pin, uint16_t time, uint8_t type ){
+void IrSystem::add( uint8_t pin, uint16_t time, uint8_t pause, uint8_t type ){
     node** handler;
     if( type == SIMULTANEOUS ){
         handler = &this->simultaneous;
@@ -88,6 +91,7 @@ void IrSystem::add( uint8_t pin, uint16_t time, uint8_t type ){
     ( *handler )->nextNode = NULL;
     ( *handler )->pin = pin;
     ( *handler )->time = time;
+    ( *handler )->pause = pause;
     ( *handler )->lastMillis = 0;
 }
 
@@ -111,22 +115,26 @@ void IrSystem::run( DateTime now ){
     }
 }
 
-bool IrSystem::execute( node** eNode ){
-    bool result = true;
+void IrSystem::execute( node** eNode ){
     if( ( *eNode )->lastMillis == 0 ){
         ( *eNode )->lastMillis = millis();
     }
     if( millis() - ( *eNode )->lastMillis >= 1000 ){
-        ( *eNode )->time--;
+        ( *eNode )->lastMillis = millis();
+        if( ( *eNode )->time > 0 ){
+            ( *eNode )->time--; 
+        }else{
+            ( *eNode )->pause--;
+        }
     }
     if( ( *eNode )->time > 0 ){
         digitalWrite( ( *eNode )->pin, HIGH );
     }else{
         digitalWrite( ( *eNode )->pin, LOW );
-        this->remove( eNode );
-        result = false;
+        if( ( *eNode )->pause == 0 ){
+            this->remove( eNode );            
+        }      
     }
-    return result;
 }
 
 bool IrSystem::isExecuting( uint8_t pin ){
@@ -163,18 +171,22 @@ Valv* IrSystem::getValv( uint8_t pin ){
 }
 
 void IrSystem::checkConfigs( DateTime now ){
+
     Config readingConfig;
     vNode** handler = &valvs;
     while( ( *handler ) != NULL ){
         Valv* valv = &( *handler )->valv;
         for( int i = 0; i < valv->getCountConfig(); i++ ){
             readingConfig = Config( valv->getConfig( i ) );
-            if( ( readingConfig.hour == now.hour() ) &&
-                ( readingConfig.min == now.minute() ) &&
-                ( readingConfig.sec == now.second() ) && 
+            if( ( readingConfig.sec == now.second() ) &&
+                ( readingConfig.min == now.minute() ) && 
+                ( readingConfig.hour == now.hour() ) &&
                 ( !this->isExecuting( valv->getPin() ) )
             ){
-                this->add( valv->getPin(), readingConfig.maxEvent, readingConfig.type );    
+                this->add(  valv->getPin(), 
+                            readingConfig.maxEvent, 
+                            readingConfig.pause, 
+                            readingConfig.type );    
             }
         }
         handler = &( *handler )->nextNode;
