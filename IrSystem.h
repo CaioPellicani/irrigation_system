@@ -5,6 +5,7 @@
 
 #ifdef TEST
 #include "../RTClib_EPOXY/RTClib_EPOXY.h"
+long map(long x, long in_min, long in_max, long out_min, long out_max);
 #else
 #include <RTClib.h>
 #endif
@@ -32,7 +33,7 @@ public:
     uint16_t secHIGH;
     bool useMonthlyPercent;
     uint8_t type;
-    Config(){};
+    Config();
     Config( uint8_t hour, uint8_t min, uint8_t, uint16_t secHIGH = 0, bool useMonthlyPercent = false, 
             uint8_t pause = 0, uint8_t type = SIMULTANEOUS );
     Config( rawConfigData rawData );
@@ -74,6 +75,7 @@ private:
     uint8_t arrMonthlyPercent[12];
     bool isExecuting( uint8_t pin );
     void add( uint8_t pin, uint16_t time, uint8_t pause, uint8_t type );
+    uint16_t calculateTime( uint16_t secHIGH, bool useMonthlyPercent, DateTime now  );
 
 public:
     IrSystem();

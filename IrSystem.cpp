@@ -1,6 +1,12 @@
 #include "IrSystem.h"
 /** Config METHODS */
-
+#ifdef TEST
+long map(long x, long in_min, long in_max, long out_min, long out_max)
+{
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+#endif
+Config::Config(){}
 Config::Config( uint8_t hour, uint8_t min, uint8_t sec, uint16_t secHIGH, bool useMonthlyPercent, uint8_t pause, uint8_t type ){
     this->sec = sec;
     this->min = min;
@@ -205,11 +211,32 @@ void IrSystem::checkConfigs( DateTime now ){
                 ( !this->isExecuting( valv->getPin() ) )
             ){
                 this->add(  valv->getPin(), 
-                            readingConfig.secHIGH, 
+                            this->calculateTime( readingConfig.secHIGH, 
+                                                 readingConfig.useMonthlyPercent, 
+                                                 now ), 
                             readingConfig.pause, 
                             readingConfig.type );    
             }
         }
         handler = &( *handler )->nextNode;
+    }
+}
+
+uint16_t IrSystem::calculateTime( uint16_t secHIGH, bool useMonthlyPercent, DateTime now ){
+    if( useMonthlyPercent ){
+        static uint8_t monthsDays[12] = { 31, 28, 31, 30, 31, 30, 
+                                          31, 31, 30, 31, 30, 31 };
+        uint8_t month = now.month() - 1;
+        uint8_t nextMonth = ( now.month() == 12 ) ? 0 : month + 1;
+
+        uint8_t lastDay = monthsDays[ month ];
+        uint8_t min = this->arrMonthlyPercent[ month ];
+        uint8_t max = this->arrMonthlyPercent[ nextMonth ];
+
+        uint8_t percent = map( now.day(), 1, lastDay, min, max );
+        int result = ( secHIGH * percent ) / 100;
+        return result;
+    }else{
+        return secHIGH;
     }
 }
