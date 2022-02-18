@@ -82,9 +82,9 @@ public:
     void remove( node** dNode );
     void addValv( uint8_t pin );
     Valv* getValv( uint8_t i ); 
-    void monthlyPercent( uint8_t jan, uint8_t feb, uint8_t mar, uint8_t apr, 
-                            uint8_t may, uint8_t jun, uint8_t jul, uint8_t ago, 
-                            uint8_t sep, uint8_t out, uint8_t nov, uint8_t dez );
+    void monthlyPercent( float jan, float feb, float mar, float apr, 
+                            float may, float jun, float jul, float ago, 
+                            float sep, float out, float nov, float dez );
     void checkConfigs( DateTime now );
     void execute( node** eNode );
     void run( DateTime now );

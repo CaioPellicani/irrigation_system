@@ -86,9 +86,9 @@ IrSystem::IrSystem(){
     this->monthlyPercent( 100, 100, 100, 100, 100, 100,
                           100, 100, 100, 100, 100, 100 );
 }
-void IrSystem::monthlyPercent( uint8_t jan, uint8_t feb, uint8_t mar, uint8_t apr, 
-                                  uint8_t may, uint8_t jun, uint8_t jul, uint8_t ago, 
-                                  uint8_t sep, uint8_t out, uint8_t nov, uint8_t dez ){
+void IrSystem::monthlyPercent( float jan, float feb, float mar, float apr, 
+                                  float may, float jun, float jul, float ago, 
+                                  float sep, float out, float nov, float dez ){
     this->arrMonthlyPercent[ 0] = jan; 
     this->arrMonthlyPercent[ 1] = feb; 
     this->arrMonthlyPercent[ 2] = mar; 
@@ -230,11 +230,11 @@ uint16_t IrSystem::calculateTime( uint16_t secHIGH, bool useMonthlyPercent, Date
         uint8_t nextMonth = ( now.month() == 12 ) ? 0 : month + 1;
 
         uint8_t lastDay = monthsDays[ month ];
-        uint8_t min = this->arrMonthlyPercent[ month ];
-        uint8_t max = this->arrMonthlyPercent[ nextMonth ];
+        uint32_t min = ( uint32_t ) this->arrMonthlyPercent[ month ] * 1000;
+        uint32_t max = ( uint32_t ) this->arrMonthlyPercent[ nextMonth ] * 1000;
 
-        uint8_t percent = map( now.day(), 1, lastDay, min, max );
-        int result = ( secHIGH * percent ) / 100;
+        uint32_t percent = map( now.day(), 1, lastDay, min, max );
+        int result = ( secHIGH * percent ) / 100000;
         return result;
     }else{
         return secHIGH;
