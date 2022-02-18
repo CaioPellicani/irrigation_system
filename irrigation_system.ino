@@ -19,16 +19,21 @@ void setup(){
     irSys.monthlyPercent(  16.69, 30.66, 51.82, 82.12, 91.97, 93.43, 
                           100.00, 99.64, 89.05, 59.49, 40.51, 10.22 );
 
-    irSys.addValv( 7 );
-    irSys.addValv( 8 );
-    irSys.addValv( 9 );
+    #ifdef TEST
+    uint16_t fiveMin = 5;
+    #else
+    uint16_t fiveMin = 5 * 60 * 60;
+    #endif
 
-    irSys.getValv( 7 )->addConfig( Config( 9, 0, 0, ( 5 * 60 * 60 ), true, 0, ENQUEUED ) );
-    irSys.getValv( 7 )->addConfig( Config( 9, 0, 7, ( 5 * 60 * 60 ), true, 0, ENQUEUED ) );
-    irSys.getValv( 8 )->addConfig( Config( 9, 0, 2, ( 5 * 60 * 60 ), true, 0, ENQUEUED ) ); 
-    irSys.getValv( 9 )->addConfig( Config( 9, 0, 1, ( 5 * 60 * 60 ), true, 0, ENQUEUED ) ); 
-    float x = 22.88000000;
-    Serial.println( (int)( 100 * x ) );
+    irSys.addValv( 7, 0 );
+    irSys.addValv( 8, 1 );
+    irSys.addValv( 9, 0 );
+
+    irSys.getValv( 7, 0 )->addConfig( Config( 9, 0, 0, fiveMin, true, 0, ENQUEUED ) );
+    irSys.getValv( 7, 0 )->addConfig( Config( 9, 0, 7, fiveMin, true, 0, ENQUEUED ) );
+    irSys.getValv( 8, 1 )->addConfig( Config( 9, 0, 2, fiveMin, true, 0, ENQUEUED ) ); 
+    irSys.getValv( 9, 0 )->addConfig( Config( 9, 0, 1, fiveMin, true, 0, ENQUEUED ) );
+    irSys.deactivateGroup( 1 );
 }
 
 void loop(){

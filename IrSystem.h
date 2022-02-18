@@ -43,13 +43,15 @@ public:
 class Valv{
 private:
     uint8_t pin;
+    uint8_t group;
     uint8_t configsCount;
     rawConfigData config[MAX_CONFIG_NUM];
 public:  
     Valv();
-    void begin( uint8_t pin );
+    void begin( uint8_t pin, uint8_t group = 0 );
     bool addConfig( Config newConfig );
     uint8_t getPin();
+    uint8_t getGroup();
     rawConfigData getConfig( uint8_t index );
     uint8_t getCountConfig();
 };
@@ -64,6 +66,7 @@ private:
     struct node{
         node* nextNode;
         uint8_t pin;
+        uint8_t group;
         uint16_t time;
         uint8_t pause;
         uint32_t lastMillis;
@@ -73,15 +76,18 @@ private:
     node* simultaneous;
     node* enqueued;
     uint8_t arrMonthlyPercent[12];
-    bool isExecuting( uint8_t pin );
-    void add( uint8_t pin, uint16_t time, uint8_t pause, uint8_t type );
+    bool isExecuting( uint8_t pin, uint8_t group );
+    void add( uint8_t pin, uint8_t group, uint16_t time, uint8_t pause, uint8_t type );
     uint16_t calculateTime( uint16_t secHIGH, bool useMonthlyPercent, DateTime now  );
 
 public:
+    uint8_t groupsState;
     IrSystem();
+    void deactivateGroup( uint8_t group );
+    void activateGroup( uint8_t group );
     void remove( node** dNode );
-    void addValv( uint8_t pin );
-    Valv* getValv( uint8_t i ); 
+    void addValv( uint8_t pin, uint8_t group );
+    Valv* getValv( uint8_t i, uint8_t group ); 
     void monthlyPercent( float jan, float feb, float mar, float apr, 
                             float may, float jun, float jul, float ago, 
                             float sep, float out, float nov, float dez );

@@ -54,9 +54,10 @@ rawConfigData Config::toRaw(){
 
 /** Valv METHODS */
 Valv::Valv(){}
-void Valv::begin( uint8_t pin ){
+void Valv::begin( uint8_t pin, uint8_t group ){
     this->configsCount = 0;
     this->pin = pin;
+    this->group = group;
     pinMode( this->pin, OUTPUT );
     digitalWrite( this->pin, LOW );
 }
@@ -72,6 +73,10 @@ bool Valv::addConfig( Config newConfig ){
 uint8_t Valv::getPin(){
     return this->pin;
 }
+
+uint8_t Valv::getGroup(){
+    return this->group;
+}
 rawConfigData Valv::getConfig( uint8_t index ){
     return this->config[ index ];
 }
@@ -79,16 +84,16 @@ uint8_t Valv::getCountConfig(){
     return this->configsCount;
 }
 
-
 /** IrSystem METHODS */
 
 IrSystem::IrSystem(){
+    this->groupsState = 0xFF;
     this->monthlyPercent( 100, 100, 100, 100, 100, 100,
                           100, 100, 100, 100, 100, 100 );
 }
 void IrSystem::monthlyPercent( float jan, float feb, float mar, float apr, 
-                                  float may, float jun, float jul, float ago, 
-                                  float sep, float out, float nov, float dez ){
+                               float may, float jun, float jul, float ago, 
+                               float sep, float out, float nov, float dez ){
     this->arrMonthlyPercent[ 0] = jan; 
     this->arrMonthlyPercent[ 1] = feb; 
     this->arrMonthlyPercent[ 2] = mar; 
@@ -103,7 +108,17 @@ void IrSystem::monthlyPercent( float jan, float feb, float mar, float apr,
     this->arrMonthlyPercent[11] = dez; 
 }
 
-void IrSystem::add( uint8_t pin, uint16_t time, uint8_t pause, uint8_t type ){
+void IrSystem::deactivateGroup( uint8_t group ){
+    if( this->groupsState & 1 << ( group ) ){
+        this->groupsState ^= 1 << ( group );
+    }
+}
+
+void IrSystem::activateGroup( uint8_t group ){
+    this->groupsState |= 1 << ( group );
+}
+
+void IrSystem::add( uint8_t pin, uint8_t group, uint16_t time, uint8_t pause, uint8_t type ){
     node** handler;
     if( type == SIMULTANEOUS ){
         handler = &this->simultaneous;
@@ -117,6 +132,7 @@ void IrSystem::add( uint8_t pin, uint16_t time, uint8_t pause, uint8_t type ){
     ( *handler ) = new node;
     ( *handler )->nextNode = NULL;
     ( *handler )->pin = pin;
+    ( *handler )->group = group;
     ( *handler )->time = time;
     ( *handler )->pause = pause;
     ( *handler )->lastMillis = 0;
@@ -155,7 +171,9 @@ void IrSystem::execute( node** eNode ){
         }
     }
     if( ( *eNode )->time > 0 ){
-        digitalWrite( ( *eNode )->pin, HIGH );
+        if( this->groupsState & 1 << ( ( *eNode )->group ) ){
+            digitalWrite( ( *eNode )->pin, HIGH );
+        }
     }else{
         digitalWrite( ( *eNode )->pin, LOW );
         if( ( *eNode )->pause == 0 ){
@@ -164,13 +182,13 @@ void IrSystem::execute( node** eNode ){
     }
 }
 
-bool IrSystem::isExecuting( uint8_t pin ){
+bool IrSystem::isExecuting( uint8_t pin, uint8_t group ){
     node** headList[2] = { &this->simultaneous, &this->enqueued };
     node** handler;
     for( int i = 0; i < 2; i++ ){
         handler = headList[i];
         while( ( *handler ) != NULL ){
-            if( ( *handler )->pin == pin ){
+            if( ( ( *handler )->pin == pin ) && ( ( *handler)->group == group ) ){
                 return true;
             }
             handler = &( *handler )->nextNode;
@@ -179,22 +197,27 @@ bool IrSystem::isExecuting( uint8_t pin ){
     return false;
 }
 
-void IrSystem::addValv( uint8_t pin ){
+void IrSystem::addValv( uint8_t pin, uint8_t group ){
     vNode** handler = &valvs;    
     while ( *handler != NULL ){
         handler = &( *handler )->nextNode;
     }
     ( *handler ) = new vNode;
     ( *handler )->nextNode = NULL;
-    ( *handler )->valv.begin( pin ); 
+    ( *handler )->valv.begin( pin, group ); 
 }
 
-Valv* IrSystem::getValv( uint8_t pin ){
+Valv* IrSystem::getValv( uint8_t pin, uint8_t group ){
     vNode** handler = &valvs; 
-    while( ( ( *handler ) != NULL ) && ( ( *handler )->valv.getPin() != pin ) ){
+    Valv* valv;
+    while( ( *handler ) != NULL ){
+        valv = &( *handler )->valv;
+        if( ( valv->getPin() == pin ) && ( valv->getGroup() == group ) ){
+            return valv;
+        }
         handler = &( *handler )->nextNode;
     }
-    return &( *handler )->valv;
+    return NULL;
 }
 
 void IrSystem::checkConfigs( DateTime now ){
@@ -208,9 +231,10 @@ void IrSystem::checkConfigs( DateTime now ){
             if( ( readingConfig.sec == now.second() ) &&
                 ( readingConfig.min == now.minute() ) && 
                 ( readingConfig.hour == now.hour() ) &&
-                ( !this->isExecuting( valv->getPin() ) )
+                ( !this->isExecuting( valv->getPin(), valv->getGroup() ) )
             ){
                 this->add(  valv->getPin(), 
+                            valv->getGroup(),
                             this->calculateTime( readingConfig.secHIGH, 
                                                  readingConfig.useMonthlyPercent, 
                                                  now ), 
