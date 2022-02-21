@@ -86,7 +86,7 @@ public:
     void deactivateGroup( uint8_t group );
     void activateGroup( uint8_t group );
     void remove( node** dNode );
-    void addValv( uint8_t pin, uint8_t group );
+    Valv* addValv( uint8_t pin, uint8_t group );
     Valv* getValv( uint8_t i, uint8_t group ); 
     void monthlyPercent( float jan, float feb, float mar, float apr, 
                             float may, float jun, float jul, float ago, 

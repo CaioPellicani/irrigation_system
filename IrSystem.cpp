@@ -1,4 +1,8 @@
 #include "IrSystem.h"
+
+#define RELAY_ON  LOW
+#define RELAY_OFF HIGH
+
 /** Config METHODS */
 #ifdef TEST
 long map(long x, long in_min, long in_max, long out_min, long out_max)
@@ -59,7 +63,7 @@ void Valv::begin( uint8_t pin, uint8_t group ){
     this->pin = pin;
     this->group = group;
     pinMode( this->pin, OUTPUT );
-    digitalWrite( this->pin, LOW );
+    digitalWrite( this->pin, RELAY_OFF );
 }
 
 bool Valv::addConfig( Config newConfig ){
@@ -172,10 +176,10 @@ void IrSystem::execute( node** eNode ){
     }
     if( ( *eNode )->time > 0 ){
         if( this->groupsState & 1 << ( ( *eNode )->group ) ){
-            digitalWrite( ( *eNode )->pin, HIGH );
+            digitalWrite( ( *eNode )->pin, RELAY_ON );
         }
     }else{
-        digitalWrite( ( *eNode )->pin, LOW );
+        digitalWrite( ( *eNode )->pin, RELAY_OFF );
         if( ( *eNode )->pause == 0 ){
             this->remove( eNode );            
         }      
@@ -197,14 +201,18 @@ bool IrSystem::isExecuting( uint8_t pin, uint8_t group ){
     return false;
 }
 
-void IrSystem::addValv( uint8_t pin, uint8_t group ){
+Valv* IrSystem::addValv( uint8_t pin, uint8_t group ){
     vNode** handler = &valvs;    
     while ( *handler != NULL ){
         handler = &( *handler )->nextNode;
     }
     ( *handler ) = new vNode;
+
+    if( ( *handler ) == NULL ) return NULL;
+
     ( *handler )->nextNode = NULL;
     ( *handler )->valv.begin( pin, group ); 
+    return &( *handler )->valv;
 }
 
 Valv* IrSystem::getValv( uint8_t pin, uint8_t group ){
@@ -235,7 +243,7 @@ void IrSystem::checkConfigs( DateTime now ){
             ){
                 this->add(  valv->getPin(), 
                             valv->getGroup(),
-                            this->calculateTime( readingConfig.secHIGH, 
+                            this->calculateTime( readingConfig.sec, 
                                                  readingConfig.useMonthlyPercent, 
                                                  now ), 
                             readingConfig.pause, 
