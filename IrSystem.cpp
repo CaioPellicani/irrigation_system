@@ -1,11 +1,9 @@
 #include "IrSystem.h"
 /** Config METHODS */
-#ifdef TEST
-long map(long x, long in_min, long in_max, long out_min, long out_max)
-{
-  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-}
-#endif
+
+#define RELAY_ON LOW
+#define RELAY_OFF HIGH
+
 Config::Config(){}
 Config::Config( uint8_t hour, uint8_t min, uint8_t sec, uint16_t secHIGH, bool useMonthlyPercent, uint8_t pause, uint8_t type ){
     this->sec = sec;
@@ -59,7 +57,7 @@ void Valv::begin( uint8_t pin, uint8_t group ){
     this->pin = pin;
     this->group = group;
     pinMode( this->pin, OUTPUT );
-    digitalWrite( this->pin, LOW );
+    digitalWrite( this->pin, RELAY_OFF );
 }
 
 bool Valv::addConfig( Config newConfig ){
@@ -172,10 +170,10 @@ void IrSystem::execute( node** eNode ){
     }
     if( ( *eNode )->time > 0 ){
         if( this->groupsState & 1 << ( ( *eNode )->group ) ){
-            digitalWrite( ( *eNode )->pin, HIGH );
+            digitalWrite( ( *eNode )->pin, RELAY_ON );
         }
     }else{
-        digitalWrite( ( *eNode )->pin, LOW );
+        digitalWrite( ( *eNode )->pin, RELAY_OFF );
         if( ( *eNode )->pause == 0 ){
             this->remove( eNode );            
         }      

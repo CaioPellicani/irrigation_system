@@ -5,7 +5,6 @@
 
 #ifdef TEST
 #include "../RTClib_EPOXY/RTClib_EPOXY.h"
-long map(long x, long in_min, long in_max, long out_min, long out_max);
 #else
 #include <RTClib.h>
 #endif
