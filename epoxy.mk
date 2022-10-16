@@ -6,4 +6,3 @@ ARDUINO_LIB_DIRS := $(STD_DIR) ..
 CPPFLAGS += -g -D TEST
 
 -include ${HOME}/Arduino/libraries/EpoxyDuino/EpoxyDuino.mk
-

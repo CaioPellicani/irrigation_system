@@ -19,15 +19,15 @@ Config::Config( uint8_t hour, uint8_t min, uint8_t sec, uint16_t secHIGH, bool u
     this->type = type;
 }
 
-#define BIT_OP( type, mask, shift ) ( type )( ( rawData & ( uint64_t ) mask << shift ) >> shift )
+#define BIT_OP( data, type, mask, shift ) ( type )( ( data & ( uint64_t ) mask << shift ) >> shift )
 Config::Config( rawConfigData rawData ){
-    this->sec =               BIT_OP(  uint8_t,  0x3F,  0 );
-    this->min =               BIT_OP(  uint8_t,  0x3F,  6 );
-    this->hour =              BIT_OP(  uint8_t,  0x1F, 12 );
-    this->pause =             BIT_OP(  uint8_t,  0x3F, 17 );
-    this->secHIGH =           BIT_OP( uint16_t, 0xFFF, 23 );
-    this->useMonthlyPercent = BIT_OP(  uint8_t,   0x1, 35 );
-    this->type =              BIT_OP(  uint8_t,   0x1, 36 );
+    this->sec =               BIT_OP( rawData,  uint8_t,  0x3F,  0 );
+    this->min =               BIT_OP( rawData,  uint8_t,  0x3F,  6 );
+    this->hour =              BIT_OP( rawData,  uint8_t,  0x1F, 12 );
+    this->pause =             BIT_OP( rawData,  uint8_t,  0x3F, 17 );
+    this->secHIGH =           BIT_OP( rawData, uint16_t, 0xFFF, 23 );
+    this->useMonthlyPercent = BIT_OP( rawData,  uint8_t,   0x1, 35 );
+    this->type =              BIT_OP( rawData,  uint8_t,   0x1, 36 );
 }
 
 rawConfigData Config::toRaw(){

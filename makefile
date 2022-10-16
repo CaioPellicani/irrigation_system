@@ -51,7 +51,7 @@ check_libs:
 
 ## EPOXY MAKE CMD
 
-run: epoxy
+run: epoxymk
 	@printf "Serial Output:\n"
 	@./$(PROJECT_NAME).out
 
@@ -61,7 +61,7 @@ vgd: epoxymk
 gdb: epoxymk
 	@gdb ./$(PROJECT).out -x ./init.gdb
 
-epoxy: check_epoxy
+epoxy: check_epoxy check_aunit
 	@$(MAKE) -f epoxy.mk APP_NAME=$(PROJECT_NAME)
 
 epoxyclean:
@@ -74,4 +74,9 @@ epoxymk: epoxyclean epoxy
 check_epoxy:
     ifeq ("$(wildcard ${LIB_DIR}/EpoxyDuino)", "")
 		git clone https://github.com/bxparks/EpoxyDuino ${LIB_DIR}/EpoxyDuino
+    endif
+
+check_aunit:
+    ifeq ("$(wildcard ${LIB_DIR}/AUnit)", "")
+		git clone https://github.com/bxparks/AUnit ${LIB_DIR}/AUnit
     endif

@@ -1,10 +1,10 @@
 #ifndef __IR_SYSTEM_H__
 #define __IR_SYSTEM_H__
 
-#include <Arduino.h>
+//#include <Arduino.h>
 
 #ifdef TEST
-#include "../RTClib_EPOXY/RTClib_EPOXY.h"
+#include "RTClib_EPOXY/RTClib_EPOXY.h"
 #else
 #include <RTClib.h>
 #endif

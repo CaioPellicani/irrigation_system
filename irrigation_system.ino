@@ -7,17 +7,8 @@
 #define VALV_FRONT 6 
 #define VALV_BACK 5
 
-enum groups{ INTERNAL_GARDEN, EXTERNAL_GARDEN };
-
 RTC_DS3231 rtc;
 IrSystem irSys;
-
-#define EXTERNAL
-#define INTERNAL
-
-#define VALV_INTERNAL 8
-#define VALV_FRONT 5
-#define VALV_BACK 6
 
 #define GROUP_INTERNAL 0
 #define GROUP_EXTERNAL 1
@@ -26,9 +17,9 @@ void setup(){
     Serial.begin( 9600 );
     while( !rtc.begin() );
     if( rtc.lostPower() ){
-        #ifdef TEST
-        rtc.adjust( DateTime(2022, 7, 1, 8, 59, 55 ) );
-        #else
+#ifdef TEST
+        rtc.adjust( DateTime(2000, 1, 1, 8, 59, 55 ) );
+#else
         rtc.adjust( DateTime( F( __DATE__ ), F( __TIME__ ) ) );
         Serial.print( "Adjusting RTC" );
 #endif
@@ -42,12 +33,11 @@ void setup(){
 
 #ifdef TEST
     uint16_t fiveMin = 5;
-
     uint8_t tenSec = 1;
-    #else
+#else
     uint16_t fiveMin = 5 * 60;
     uint8_t tenSec = 10;  
-    #endif
+#endif
 
     irSys.addValv( VALV_INTERNAL, GROUP_INTERNAL );
     irSys.addValv( VALV_FRONT, GROUP_EXTERNAL );
@@ -57,10 +47,11 @@ void setup(){
     irSys.getValv( VALV_FRONT, GROUP_EXTERNAL )->addConfig( Config( 9, 0, 1, fiveMin, true, tenSec, ENQUEUED ) ); 
     irSys.getValv( VALV_BACK, GROUP_EXTERNAL )->addConfig( Config( 9, 0, 2, fiveMin, true, tenSec, ENQUEUED ) );
 
-#if defined( EXTERNAL )  
+
+#if defined( EXTERNAL_ARDUINO )  
     irSys.deactivateGroup( GROUP_INTERNAL );
 #endif
-#if defined( INTERNAL )
+#if defined( INTERNAL_ARDUINO )
     irSys.deactivateGroup( GROUP_EXTERNAL );
 #endif
 
@@ -81,7 +72,7 @@ void loop(){
     for( int i = 1; i < 13; i++ ){
         if( digitalRead( i ) != map[i] ){
             map[i] = digitalRead( i );
-            Serial.print( );
+            Serial.print( "");
             Serial.print( "TestTime: " );           
             Serial.println( rtc.now().timestamp( DateTime::TIMESTAMP_TIME ) );
             Serial.print( i );
@@ -90,5 +81,4 @@ void loop(){
             static int interations = 6; if( --interations <= 0 ) exit(0); 
         }
     }
-#endif
 }   
