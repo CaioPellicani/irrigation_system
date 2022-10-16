@@ -1,0 +1,3 @@
+[submodule "RTClib_EPOXY"]
+	path = RTClib_EPOXY
+	url = https://github.com/CaioPellicani/RTClib_EPOXY.git
