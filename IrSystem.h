@@ -1,15 +1,11 @@
+
+
 #ifndef __IR_SYSTEM_H__
 #define __IR_SYSTEM_H__
 
-//#include <Arduino.h>
-
-#ifdef TEST
-#include "RTClib_EPOXY/RTClib_EPOXY.h"
-#else
+#include <Arduino.h>
 #include <RTClib.h>
-#endif
-
-#define MAX_CONFIG_NUM 2
+#define MAX_CONFIG_NUM 4
 
 /*! @protocol
 *    6 bits -  0 to  5 = SEC 

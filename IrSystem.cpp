@@ -1,12 +1,10 @@
 #include "IrSystem.h"
 
-#define RELAY_ON  LOW
-#define RELAY_OFF HIGH
-
 /** Config METHODS */
 
-#define RELAY_ON LOW
-#define RELAY_OFF HIGH
+const bool high = LOW;
+#define RELAY_ON high
+#define RELAY_OFF !high
 
 Config::Config(){}
 Config::Config( uint8_t hour, uint8_t min, uint8_t sec, uint16_t secHIGH, bool useMonthlyPercent, uint8_t pause, uint8_t type ){
@@ -90,6 +88,7 @@ uint8_t Valv::getCountConfig(){
 
 IrSystem::IrSystem(){
     this->groupsState = 0xFF;
+    //Serial.println( this->groupsState);
     this->monthlyPercent( 100, 100, 100, 100, 100, 100,
                           100, 100, 100, 100, 100, 100 );
 }
@@ -167,19 +166,25 @@ void IrSystem::execute( node** eNode ){
     if( millis() - ( *eNode )->lastMillis >= 1000 ){
         ( *eNode )->lastMillis = millis();
         if( ( *eNode )->time > 0 ){
-            ( *eNode )->time--; 
+            Serial.print(( *eNode )->pin);
+            Serial.print(" - time - ");
+            Serial.println(( *eNode )->time);
+            ( *eNode )->time--;
         }else{
+            Serial.print(( *eNode )->pin);
+            Serial.print(" - pause - ");
+            Serial.println(( *eNode )->pause);
             ( *eNode )->pause--;
         }
     }
     if( ( *eNode )->time > 0 ){
-        if( this->groupsState & 1 << ( ( *eNode )->group ) ){
+        if( this->groupsState & 1 << ( ( *eNode )->group ) ){     
             digitalWrite( ( *eNode )->pin, RELAY_ON );
         }
     }else{
-        digitalWrite( ( *eNode )->pin, RELAY_OFF );
+        digitalWrite( ( *eNode )->pin, RELAY_OFF );    
         if( ( *eNode )->pause == 0 ){
-            this->remove( eNode );            
+            this->remove( eNode );                
         }      
     }
 }
@@ -241,7 +246,7 @@ void IrSystem::checkConfigs( DateTime now ){
             ){
                 this->add(  valv->getPin(), 
                             valv->getGroup(),
-                            this->calculateTime( readingConfig.sec, 
+                            this->calculateTime( readingConfig.secHIGH, 
                                                  readingConfig.useMonthlyPercent, 
                                                  now ), 
                             readingConfig.pause, 
