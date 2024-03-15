@@ -3,17 +3,30 @@
 
 using namespace aunit;
 
-int secHigh = 5 * 60;
+
 test(testConfigTranslation) {
+    int secHigh = 5 * 60;
     Config config = Config( 9, 0, 0, secHigh, false, 10, ENQUEUED );
     Config raw_config = Config(config.toRaw());
     assertEqual(config.toRaw(), raw_config.toRaw());
-    assertEqual(config.secHIGH, secHigh);
-    assertEqual(raw_config.secHIGH, secHigh);
+}
+
+
+test(testConfigRawConvertion){
+    rawConfigData raw_config = 2517929984;
+    Config config = Config(raw_config);
+
+    assertEqual(config.sec, 0);
+    assertEqual(config.min, 0);
+    assertEqual(config.hour, 9);
+    assertEqual(config.secHIGH, 5 * 60);
+    assertEqual(config.useMonthlyPercent, false);
+    assertEqual(config.type, ENQUEUED);
 }
 
 
 test(valvTest){
+    int secHigh = 5 * 60;
     Valv valv = Valv();
     int pin = 4;
     int group = 1;
@@ -35,6 +48,7 @@ test(valvTest){
     assertNotEqual(valv.getConfig(0), config1.toRaw());
 
 }
+
 
 class IRSystemTest: public TestOnce {
     protected:
