@@ -4,7 +4,11 @@
 #define __IR_SYSTEM_H__
 
 #include <Arduino.h>
-#include <RTClib.h>
+#ifndef TEST
+    #include <RTClib.h>
+#else
+    #include "RTClib_EPOXY/RTClib_EPOXY.h"
+#endif
 #define MAX_CONFIG_NUM 4
 
 /*! @protocol
